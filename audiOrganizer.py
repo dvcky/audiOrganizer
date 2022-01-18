@@ -1,59 +1,28 @@
-import eyed3 #INSTALL THIS
+import eyed3
 import os
-import shutil
-eyed3.log.setLevel("ERROR")
 
-i = 0
-filelist = []
-filetypes = (".flac",".mp3",".wav")
+artist = "a103"
+artistpfx = "a103 - "
+mp3count = -103
 
-folder = input("Drop folder to scan/organize here: ")
+def countMp3(mp3dir):
+    mp3count = 0
+    for file in os.listdir(mp3dir):
+        if(file.endswith(".mp3")):
+            mp3count += 1
+    return mp3count
 
-#create organized output folder
-outDir = os.path.join(folder, "out")
-if not os.path.isdir(outDir):
-    os.mkdir(outDir)
-
-print("Building array...")
-for root, subdirs, files in os.walk(folder):
-    for file in files:
-        if file.endswith(filetypes):
-            filelist.append(os.path.join(root, file))
-
-print("Done! Creating organized library...")
-for file in filelist:
-    audiofile = eyed3.load(file)
-
-    artistDir = os.path.join(outDir, audiofile.tag.artist)
-    albumDir = os.path.join(artistDir, audiofile.tag.album)
-    if not os.path.isdir(artistDir):
-        os.mkdir(artistDir)
-    if not os.path.isdir(albumDir):
-        os.mkdir(albumDir)
-
-    numZeros = 2
-    if(audiofile.tag.track_num[1]):
-        numTracks = audiofile.tag.track_num[1]
-        while(numTracks > 99):
-            numTracks /= 10
-            numZeros += 1
-    songFile = os.path.join(albumDir, str(audiofile.tag.track_num[0]).zfill(numZeros) + " - " + audiofile.tag.title + ".mp3")
-    if not os.path.isfile(songFile):
-        hasImageData = False
-        for i in audiofile.tag.images:
-            if i:
-                hasImageData = True
-        if not hasImageData:
-            if not os.path.isfile(os.path.join(albumDir, "cover.jpg")) and not os.path.isfile(os.path.join(albumDir, "cover.png")) and not os.path.isfile(os.path.join(albumDir, "folder.jpg")) and not os.path.isfile(os.path.join(albumDir, "folder.png")):
-                copyArt = input(file + " - No image data found! Would you like to copy over album art? (y/*): ")
-                if copyArt == 'y':
-                    print("OK, please copy the image to this folder: " + albumDir)
-                    print("Then, rename it to one of these variants: [cover/folder].[jpg/png]")
-                    input("Once finished, press any key to continue...")
-        shutil.copyfile(file, songFile)
-        newFile = eyed3.load(songFile)
-print("Done! Checking for albums with multiple artists...")
-#for root, subdirs, files in os.walk(outDir):
-#    for file in files:
-#        if file.endswith(filetypes):
-#            filelist.append(os.path.join(root, file))
+for folder, subs, files in os.walk(os.getcwd()):
+    if(folder.count('/') == 4):
+        artist = os.path.basename(folder)
+        artistpfx = artist + " - "
+    if(folder.count('/') == 5):
+        zfillnum = len(str(countMp3(folder)))
+    for filename in files:
+        if(filename.endswith(".mp3")):
+            if(filename.startswith(artistpfx)):
+                os.rename(os.path.join(folder,filename),os.path.join(folder,filename[len(artistpfx):]))
+                filename = filename[len(artistpfx):]
+            fileid3 = eyed3.load(os.path.join(folder,filename))
+            if(not filename.startswith(str(fileid3.tag.track_num[0]).zfill(zfillnum) + " - ")):
+                os.rename(os.path.join(folder,filename),os.path.join(folder,str(fileid3.tag.track_num[0]).zfill(zfillnum) + " - " + filename))
